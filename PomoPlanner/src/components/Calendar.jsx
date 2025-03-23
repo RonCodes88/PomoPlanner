@@ -24,6 +24,11 @@ export default function Calendar() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskTime, setNewTaskTime] = useState("");
   const [timeError, setTimeError] = useState("");
+  // New states for editing
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [editingTime, setEditingTime] = useState("");
+  const [editingTimeError, setEditingTimeError] = useState("");
 
   // Get tasks for the selected date and sort them by time
   const formattedDate = selectedDate.format("YYYY-MM-DD");
@@ -60,6 +65,8 @@ export default function Calendar() {
   const handleDateChange = (newDate) => {
     setSelectedDate(newDate);
     setShowSideView(true);
+    // Cancel any editing when changing dates
+    setEditingTaskId(null);
   };
 
   const validateTime = (timeStr) => {
@@ -77,6 +84,15 @@ export default function Calendar() {
     // but don't validate until they click save
     if (timeError) {
       setTimeError("");
+    }
+  };
+
+  const handleEditingTimeChange = (e) => {
+    const timeValue = e.target.value;
+    setEditingTime(timeValue);
+    // Remove error message when the user changes the input
+    if (editingTimeError) {
+      setEditingTimeError("");
     }
   };
 
@@ -112,7 +128,7 @@ export default function Calendar() {
     setShowAddTaskForm(false);
   };
 
-  // Add this new function to handle checkbox changes
+  // Add this function to handle checkbox changes
   const handleTaskCompletionToggle = (taskId) => {
     const updatedTasks = {
       ...tasks,
@@ -122,6 +138,49 @@ export default function Calendar() {
     };
 
     setTasks(updatedTasks);
+  };
+
+  // Start editing a task
+  const startEditing = (task) => {
+    setEditingTaskId(task.id);
+    setEditingTitle(task.title);
+    setEditingTime(task.time);
+    setEditingTimeError("");
+  };
+
+  // Save edited task
+  const saveEditedTask = () => {
+    if (editingTitle.trim() === "") return;
+
+    // Validate time format
+    if (editingTime && !validateTime(editingTime)) {
+      setEditingTimeError(
+        "Please enter time in format HH:MM AM/PM (e.g., 10:30 AM)"
+      );
+      return;
+    }
+
+    const updatedTasks = {
+      ...tasks,
+      [formattedDate]: tasksForSelectedDate.map((task) =>
+        task.id === editingTaskId
+          ? {
+              ...task,
+              title: editingTitle,
+              time: editingTime || "No time set",
+            }
+          : task
+      ),
+    };
+
+    setTasks(updatedTasks);
+    setEditingTaskId(null);
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingTaskId(null);
+    setEditingTimeError("");
   };
 
   return (
@@ -167,24 +226,79 @@ export default function Calendar() {
                   key={task.id}
                   className="p-2 text-black bg-gray-50 rounded flex items-center"
                 >
-                  <input
-                    type="checkbox"
-                    className="mr-3 h-4 w-4 text-green-500 border-gray-300 rounded focus:ring-green-400"
-                    checked={task.completed}
-                    onChange={() => handleTaskCompletionToggle(task.id)}
-                  />
-                  <div className="flex-grow text-center">
-                    <p
-                      className={`font-medium ${task.completed ? "line-through text-gray-500" : ""}`}
-                    >
-                      {task.title}
-                    </p>
-                    <p
-                      className={`text-sm text-gray-600 ${task.completed ? "line-through" : ""}`}
-                    >
-                      {task.time}
-                    </p>
-                  </div>
+                  {editingTaskId === task.id ? (
+                    // Editing mode
+                    <div className="w-full space-y-2">
+                      <input
+                        type="text"
+                        className="w-full p-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-green-400"
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        autoFocus
+                      />
+                      <div>
+                        <input
+                          type="text"
+                          className={`w-full p-1 border ${
+                            editingTimeError
+                              ? "border-red-500"
+                              : "border-gray-300"
+                          } rounded focus:outline-none focus:ring-1 focus:ring-green-400`}
+                          value={editingTime}
+                          onChange={handleEditingTimeChange}
+                          placeholder="Time (e.g., 10:30 AM)"
+                        />
+                        {editingTimeError && (
+                          <p className="text-red-500 text-xs mt-1">
+                            {editingTimeError}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          className="flex-1 bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 text-sm"
+                          onClick={saveEditedTask}
+                        >
+                          Save
+                        </button>
+                        <button
+                          className="flex-1 bg-gray-200 text-gray-800 px-2 py-1 rounded hover:bg-gray-300 text-sm"
+                          onClick={cancelEditing}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    // Display mode
+                    <>
+                      <input
+                        type="checkbox"
+                        className="mr-3 h-4 w-4 text-green-500 border-gray-300 rounded focus:ring-green-400"
+                        checked={task.completed}
+                        onChange={() => handleTaskCompletionToggle(task.id)}
+                      />
+                      <div
+                        className="flex-grow text-center cursor-pointer"
+                        onClick={() => !task.completed && startEditing(task)}
+                      >
+                        <p
+                          className={`font-medium ${
+                            task.completed ? "line-through text-gray-500" : ""
+                          }`}
+                        >
+                          {task.title}
+                        </p>
+                        <p
+                          className={`text-sm text-gray-600 ${
+                            task.completed ? "line-through" : ""
+                          }`}
+                        >
+                          {task.time}
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </li>
               ))}
             </ul>
@@ -194,6 +308,7 @@ export default function Calendar() {
 
           {showAddTaskForm ? (
             <div className="mt-4 space-y-3">
+              {/* New task form */}
               <input
                 type="text"
                 placeholder="Task name"
@@ -205,7 +320,9 @@ export default function Calendar() {
                 <input
                   type="text"
                   placeholder="Time (e.g., 10:30 AM)"
-                  className={`w-full p-2 border ${timeError ? "border-red-500" : "border-gray-300"} rounded focus:outline-none focus:ring-2 focus:ring-green-400`}
+                  className={`w-full p-2 border ${
+                    timeError ? "border-red-500" : "border-gray-300"
+                  } rounded focus:outline-none focus:ring-2 focus:ring-green-400`}
                   value={newTaskTime}
                   onChange={handleTimeChange}
                 />
