@@ -25,8 +25,37 @@ export default function Calendar() {
   const [newTaskTime, setNewTaskTime] = useState("");
   const [timeError, setTimeError] = useState("");
 
+  // Get tasks for the selected date and sort them by time
   const formattedDate = selectedDate.format("YYYY-MM-DD");
   const tasksForSelectedDate = tasks[formattedDate] || [];
+
+  // Function to convert time string to minutes for comparison
+  const timeToMinutes = (timeStr) => {
+    // Handle "No time set" case
+    if (timeStr === "No time set") return Number.MAX_SAFE_INTEGER; // Put these at the end
+
+    // Extract hours, minutes, and AM/PM
+    const match = timeStr.match(/^(\d{1,2}):(\d{2})\s?(AM|PM|am|pm)$/);
+    if (!match) return Number.MAX_SAFE_INTEGER; // Invalid format goes to the end
+
+    let [_, hours, minutes, period] = match;
+    hours = parseInt(hours);
+    minutes = parseInt(minutes);
+
+    // Convert to 24-hour format for proper sorting
+    if (period.toUpperCase() === "PM" && hours < 12) {
+      hours += 12;
+    } else if (period.toUpperCase() === "AM" && hours === 12) {
+      hours = 0;
+    }
+
+    return hours * 60 + minutes;
+  };
+
+  // Sort tasks by time (earliest first)
+  const sortedTasks = [...tasksForSelectedDate].sort((a, b) => {
+    return timeToMinutes(a.time) - timeToMinutes(b.time);
+  });
 
   const handleDateChange = (newDate) => {
     setSelectedDate(newDate);
@@ -131,9 +160,9 @@ export default function Calendar() {
             Tasks for {selectedDate.format("MMMM D, YYYY")}
           </h3>
 
-          {tasksForSelectedDate.length > 0 ? (
+          {sortedTasks.length > 0 ? (
             <ul className="space-y-2">
-              {tasksForSelectedDate.map((task) => (
+              {sortedTasks.map((task) => (
                 <li
                   key={task.id}
                   className="p-2 text-black bg-gray-50 rounded flex items-center"
