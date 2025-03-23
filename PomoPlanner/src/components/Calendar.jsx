@@ -5,7 +5,10 @@ import { lightGreen, green } from "@mui/material/colors";
 import dayjs from "dayjs";
 import React, { useState } from "react";
 
-// Sample task data - replace with your actual task fetching mechanism
+// API base URL - change this to match your Flask server
+const API_URL = "http://localhost:5000/api";
+
+// Sample task data
 const sampleTasks = {
   "2025-03-23": [
     { id: 1, title: "Complete project", time: "10:00 AM", completed: false },
@@ -24,6 +27,8 @@ export default function Calendar() {
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskTime, setNewTaskTime] = useState("");
   const [timeError, setTimeError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   // New states for editing
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editingTitle, setEditingTitle] = useState("");
@@ -96,7 +101,8 @@ export default function Calendar() {
     }
   };
 
-  const handleAddTask = () => {
+  // Send POST request to API but use local state for UI
+  const handleAddTask = async () => {
     if (newTaskTitle.trim() === "") return;
 
     // Only validate and show error when user tries to save
@@ -105,39 +111,80 @@ export default function Calendar() {
       return;
     }
 
-    // Create a new task object
-    const newTask = {
-      id: Date.now(), // Simple way to generate unique ID
-      title: newTaskTitle,
-      time: newTaskTime || "No time set",
-      completed: false, // Initialize new tasks as not completed
-    };
+    try {
+      setLoading(true);
 
-    // Update tasks state
-    const updatedTasks = {
-      ...tasks,
-      [formattedDate]: [...(tasks[formattedDate] || []), newTask],
-    };
+      // Create a new task object
+      const newTask = {
+        date: formattedDate,
+        title: newTaskTitle,
+        time: newTaskTime || "No time set",
+        completed: false,
+      };
 
-    setTasks(updatedTasks);
+      // Send POST request to API (just for the server logs)
+      const response = await fetch(`${API_URL}/tasks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newTask),
+      });
 
-    // Reset form
-    setNewTaskTitle("");
-    setNewTaskTime("");
-    setTimeError("");
-    setShowAddTaskForm(false);
+      // Create local task object with a unique ID
+      const localTask = {
+        ...newTask,
+        id: Date.now(), // Simple local ID generation
+      };
+
+      // Update local state only
+      setTasks((prev) => ({
+        ...prev,
+        [formattedDate]: [...(prev[formattedDate] || []), localTask],
+      }));
+
+      // Reset form
+      setNewTaskTitle("");
+      setNewTaskTime("");
+      setTimeError("");
+      setShowAddTaskForm(false);
+    } catch (err) {
+      console.error("Error adding task:", err);
+      setError("Failed to add task. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Add this function to handle checkbox changes
-  const handleTaskCompletionToggle = (taskId) => {
-    const updatedTasks = {
-      ...tasks,
-      [formattedDate]: tasksForSelectedDate.map((task) =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      ),
-    };
+  // Send PUT request to API but use local state for UI
+  const handleTaskCompletionToggle = async (taskId) => {
+    try {
+      // Find the task to toggle
+      const task = tasksForSelectedDate.find((t) => t.id === taskId);
+      if (!task) return;
 
-    setTasks(updatedTasks);
+      // Send PUT request to API (just for the server logs)
+      await fetch(`${API_URL}/tasks/${taskId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          completed: !task.completed,
+        }),
+      });
+
+      // Update local state directly
+      setTasks((prev) => ({
+        ...prev,
+        [formattedDate]: prev[formattedDate].map((t) =>
+          t.id === taskId ? { ...t, completed: !t.completed } : t
+        ),
+      }));
+    } catch (err) {
+      console.error("Error updating task:", err);
+      setError("Failed to update task. Please try again.");
+    }
   };
 
   // Start editing a task
@@ -148,8 +195,8 @@ export default function Calendar() {
     setEditingTimeError("");
   };
 
-  // Save edited task
-  const saveEditedTask = () => {
+  // Send PUT request to API but use local state for UI
+  const saveEditedTask = async () => {
     if (editingTitle.trim() === "") return;
 
     // Validate time format
@@ -160,21 +207,44 @@ export default function Calendar() {
       return;
     }
 
-    const updatedTasks = {
-      ...tasks,
-      [formattedDate]: tasksForSelectedDate.map((task) =>
-        task.id === editingTaskId
-          ? {
-              ...task,
-              title: editingTitle,
-              time: editingTime || "No time set",
-            }
-          : task
-      ),
-    };
+    try {
+      setLoading(true);
 
-    setTasks(updatedTasks);
-    setEditingTaskId(null);
+      // Find the task being edited
+      const task = tasksForSelectedDate.find((t) => t.id === editingTaskId);
+      if (!task) return;
+
+      // Create updated task data
+      const updatedTaskData = {
+        title: editingTitle,
+        time: editingTime || "No time set",
+      };
+
+      // Send PUT request to API (just for the server logs)
+      await fetch(`${API_URL}/tasks/${editingTaskId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedTaskData),
+      });
+
+      // Update local state directly
+      setTasks((prev) => ({
+        ...prev,
+        [formattedDate]: prev[formattedDate].map((t) =>
+          t.id === editingTaskId ? { ...t, ...updatedTaskData } : t
+        ),
+      }));
+
+      // Exit edit mode
+      setEditingTaskId(null);
+    } catch (err) {
+      console.error("Error updating task:", err);
+      setError("Failed to update task. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Cancel editing
@@ -183,6 +253,7 @@ export default function Calendar() {
     setEditingTimeError("");
   };
 
+  // The rest of your component with the JSX render remains the same
   return (
     <div className="flex">
       <div className="mr-4">
@@ -200,7 +271,6 @@ export default function Calendar() {
               },
               "& .Mui-selected": {
                 backgroundColor: `${green[500]} !important`,
-                color: "white !important",
               },
               "& .Mui-selected:hover": {
                 backgroundColor: `${green[600]} !important`,
@@ -219,7 +289,11 @@ export default function Calendar() {
             Tasks for {selectedDate.format("MMMM D, YYYY")}
           </h3>
 
-          {sortedTasks.length > 0 ? (
+          {loading ? (
+            <p>Loading tasks...</p>
+          ) : error ? (
+            <p className="text-red-500">{error}</p>
+          ) : sortedTasks.length > 0 ? (
             <ul className="space-y-2">
               {sortedTasks.map((task) => (
                 <li
