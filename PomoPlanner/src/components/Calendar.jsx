@@ -8,22 +8,91 @@ import React, { useState } from "react";
 // Sample task data - replace with your actual task fetching mechanism
 const sampleTasks = {
   "2025-03-23": [
-    { id: 1, title: "Complete project", time: "10:00 AM" },
-    { id: 2, title: "Team meeting", time: "2:00 PM" },
+    { id: 1, title: "Complete project", time: "10:00 AM", completed: false },
+    { id: 2, title: "Team meeting", time: "2:00 PM", completed: false },
   ],
-  "2025-03-24": [{ id: 3, title: "Doctor appointment", time: "9:30 AM" }],
+  "2025-03-24": [
+    { id: 3, title: "Doctor appointment", time: "9:30 AM", completed: false },
+  ],
 };
 
 export default function Calendar() {
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [showSideView, setShowSideView] = useState(true);
+  const [tasks, setTasks] = useState(sampleTasks);
+  const [showAddTaskForm, setShowAddTaskForm] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskTime, setNewTaskTime] = useState("");
+  const [timeError, setTimeError] = useState("");
 
   const formattedDate = selectedDate.format("YYYY-MM-DD");
-  const tasksForSelectedDate = sampleTasks[formattedDate] || [];
+  const tasksForSelectedDate = tasks[formattedDate] || [];
 
   const handleDateChange = (newDate) => {
     setSelectedDate(newDate);
     setShowSideView(true);
+  };
+
+  const validateTime = (timeStr) => {
+    if (!timeStr) return true; // Empty is allowed as it defaults to "No time set"
+
+    // Check for valid time format with AM or PM
+    const timeRegex = /^(0?[1-9]|1[0-2]):[0-5][0-9]\s?(AM|PM|am|pm)$/;
+    return timeRegex.test(timeStr);
+  };
+
+  const handleTimeChange = (e) => {
+    const timeValue = e.target.value;
+    setNewTaskTime(timeValue);
+    // Remove error message when the user changes the input
+    // but don't validate until they click save
+    if (timeError) {
+      setTimeError("");
+    }
+  };
+
+  const handleAddTask = () => {
+    if (newTaskTitle.trim() === "") return;
+
+    // Only validate and show error when user tries to save
+    if (newTaskTime && !validateTime(newTaskTime)) {
+      setTimeError("Please enter time in format HH:MM AM/PM (e.g., 10:30 AM)");
+      return;
+    }
+
+    // Create a new task object
+    const newTask = {
+      id: Date.now(), // Simple way to generate unique ID
+      title: newTaskTitle,
+      time: newTaskTime || "No time set",
+      completed: false, // Initialize new tasks as not completed
+    };
+
+    // Update tasks state
+    const updatedTasks = {
+      ...tasks,
+      [formattedDate]: [...(tasks[formattedDate] || []), newTask],
+    };
+
+    setTasks(updatedTasks);
+
+    // Reset form
+    setNewTaskTitle("");
+    setNewTaskTime("");
+    setTimeError("");
+    setShowAddTaskForm(false);
+  };
+
+  // Add this new function to handle checkbox changes
+  const handleTaskCompletionToggle = (taskId) => {
+    const updatedTasks = {
+      ...tasks,
+      [formattedDate]: tasksForSelectedDate.map((task) =>
+        task.id === taskId ? { ...task, completed: !task.completed } : task
+      ),
+    };
+
+    setTasks(updatedTasks);
   };
 
   return (
@@ -43,7 +112,7 @@ export default function Calendar() {
               },
               "& .Mui-selected": {
                 backgroundColor: `${green[500]} !important`,
-                color: "white !important", // Text color for the selected date
+                color: "white !important",
               },
               "& .Mui-selected:hover": {
                 backgroundColor: `${green[600]} !important`,
@@ -65,14 +134,27 @@ export default function Calendar() {
           {tasksForSelectedDate.length > 0 ? (
             <ul className="space-y-2">
               {tasksForSelectedDate.map((task) => (
-                <li key={task.id} className="p-2 text-black bg-gray-50 rounded flex items-center">
+                <li
+                  key={task.id}
+                  className="p-2 text-black bg-gray-50 rounded flex items-center"
+                >
                   <input
                     type="checkbox"
-                    className="mt-1 h-4 w-4 text-green-500 border-gray-300 rounded focus:ring-green-400"
+                    className="mr-3 h-4 w-4 text-green-500 border-gray-300 rounded focus:ring-green-400"
+                    checked={task.completed}
+                    onChange={() => handleTaskCompletionToggle(task.id)}
                   />
                   <div className="flex-grow text-center">
-                    <p className="font-medium">{task.title}</p>
-                    <p className="text-sm text-gray-600">{task.time}</p>
+                    <p
+                      className={`font-medium ${task.completed ? "line-through text-gray-500" : ""}`}
+                    >
+                      {task.title}
+                    </p>
+                    <p
+                      className={`text-sm text-gray-600 ${task.completed ? "line-through" : ""}`}
+                    >
+                      {task.time}
+                    </p>
                   </div>
                 </li>
               ))}
@@ -81,14 +163,53 @@ export default function Calendar() {
             <p className="text-gray-500">No tasks for this day</p>
           )}
 
-          <button
-            className="mt-4 bg-green-500 text-black px-4 py-2 rounded hover:bg-green-600"
-            onClick={() => {
-              /* Add task functionality here */
-            }}
-          >
-            Add Task
-          </button>
+          {showAddTaskForm ? (
+            <div className="mt-4 space-y-3">
+              <input
+                type="text"
+                placeholder="Task name"
+                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400"
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+              />
+              <div>
+                <input
+                  type="text"
+                  placeholder="Time (e.g., 10:30 AM)"
+                  className={`w-full p-2 border ${timeError ? "border-red-500" : "border-gray-300"} rounded focus:outline-none focus:ring-2 focus:ring-green-400`}
+                  value={newTaskTime}
+                  onChange={handleTimeChange}
+                />
+                {timeError && (
+                  <p className="text-red-500 text-xs mt-1">{timeError}</p>
+                )}
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  className="flex-1 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600"
+                  onClick={handleAddTask}
+                >
+                  Save
+                </button>
+                <button
+                  className="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300"
+                  onClick={() => {
+                    setShowAddTaskForm(false);
+                    setTimeError("");
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              className="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 w-full"
+              onClick={() => setShowAddTaskForm(true)}
+            >
+              Add Task
+            </button>
+          )}
         </div>
       )}
     </div>
