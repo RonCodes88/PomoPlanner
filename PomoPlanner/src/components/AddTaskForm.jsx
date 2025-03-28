@@ -3,6 +3,7 @@ import React, { useState } from "react";
 const AddTaskForm = ({ onAddTask, onCancel }) => {
   const [title, setTitle] = useState("");
   const [time, setTime] = useState("");
+  const [pomodoros, setPomodoros] = useState(0);
   const [timeError, setTimeError] = useState("");
 
   const handleTimeChange = (e) => {
@@ -21,9 +22,10 @@ const AddTaskForm = ({ onAddTask, onCancel }) => {
       return;
     }
 
-    onAddTask(title, time);
+    onAddTask(title, time, parseInt(pomodoros, 10)); // Include pomodoros
     setTitle("");
     setTime("");
+    setPomodoros(0);
   };
 
   return (
@@ -46,6 +48,16 @@ const AddTaskForm = ({ onAddTask, onCancel }) => {
           onChange={handleTimeChange}
         />
         {timeError && <p className="text-red-500 text-xs mt-1">{timeError}</p>}
+      </div>
+      <div>
+        <input
+          type="number"
+          placeholder="Pomodoros (default: 0)"
+          className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-400"
+          value={pomodoros}
+          onChange={(e) => setPomodoros(e.target.value)}
+          min="0"
+        />
       </div>
       <div className="flex space-x-2">
         <button

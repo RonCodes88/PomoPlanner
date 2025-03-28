@@ -3,12 +3,24 @@ import React, { useState } from "react";
 const EditTaskForm = ({ task, onSave, onCancel }) => {
   const [title, setTitle] = useState(task.title);
   const [time, setTime] = useState(task.time);
+  const [pomodoros, setPomodoros] = useState(task.pomodoros || ""); // Allow empty string
   const [timeError, setTimeError] = useState("");
+  const [pomodoroError, setPomodoroError] = useState("");
 
   const handleTimeChange = (e) => {
     const timeValue = e.target.value;
     setTime(timeValue);
-    if (timeError) setTimeError("");
+    if (timeError) setTimeError(""); // Clear the time error when typing
+  };
+
+  const handlePomodorosChange = (e) => {
+    const value = e.target.value;
+
+    // Allow an empty string to be input (allow for deletion)
+    if (value === "" || /^[0-9]*$/.test(value)) {
+      setPomodoros(value); // Update the pomodoros state
+      if (pomodoroError) setPomodoroError(""); // Clear pomodoro error when typing
+    }
   };
 
   const handleSubmit = () => {
@@ -21,7 +33,15 @@ const EditTaskForm = ({ task, onSave, onCancel }) => {
       return;
     }
 
-    onSave(title, time);
+    // Validate Pomodoros: Only allow valid numbers from 0 to 9, handle empty string as 0
+    let pomodorosValue = pomodoros === "" ? 0 : parseInt(pomodoros, 10);
+    if (pomodorosValue < 0 || pomodorosValue > 9) {
+      setPomodoroError("Please enter a number from 0-9 for Pomodoros");
+      return;
+    }
+
+    // Proceed with saving if everything is valid
+    onSave(title, time, pomodorosValue); // Pass pomodoros as an integer to the parent component
   };
 
   return (
@@ -44,6 +64,20 @@ const EditTaskForm = ({ task, onSave, onCancel }) => {
           placeholder="Time (e.g., 10:30 AM)"
         />
         {timeError && <p className="text-red-500 text-xs mt-1">{timeError}</p>}
+      </div>
+      <div>
+        <input
+          type="text"
+          placeholder="Pomodoros"
+          className={`w-full p-1 border ${
+            pomodoroError ? "border-red-500" : "border-gray-300"
+          } rounded focus:outline-none focus:ring-1 focus:ring-green-400`}
+          value={pomodoros}
+          onChange={handlePomodorosChange}
+        />
+        {pomodoroError && (
+          <p className="text-red-500 text-xs mt-1">{pomodoroError}</p>
+        )}
       </div>
       <div className="flex space-x-2">
         <button
