@@ -16,11 +16,11 @@ const API_URL = "http://localhost:5000/api";
 // Sample task data
 const sampleTasks = {
   "2025-03-23": [
-    { id: 1, title: "Complete project", time: "10:00 AM", completed: false },
-    { id: 2, title: "Team meeting", time: "2:00 PM", completed: false },
+    { id: 1, title: "Complete project", time: "10:00 AM", completed: false, pomodoros: 2 },
+    { id: 2, title: "Team meeting", time: "2:00 PM", completed: false, pomodoros: 1  },
   ],
   "2025-03-24": [
-    { id: 3, title: "Doctor appointment", time: "9:30 AM", completed: false },
+    { id: 3, title: "Doctor appointment", time: "9:30 AM", completed: false, pomodoros: 2 },
   ],
 };
 
@@ -50,49 +50,47 @@ export default function Calendar() {
   };
 
   // Send POST request to API but use local state for UI
-  const handleAddTask = async (title, time) => {
+  const handleAddTask = async (title, time, pomodoros = 0) => {
+    console.log("Adding task with:", title, time, pomodoros);  // Debugging log
+
     try {
-      setLoading(true);
+        setLoading(true);
 
-      // Create a new task object
-      const newTask = {
-        date: formattedDate,
-        title: title,
-        time: time || "No time set",
-        completed: false,
-      };
+        const newTask = {
+            date: formattedDate,
+            title: title,
+            time: time || "No time set",
+            completed: false,
+            pomodoros: pomodoros  // Include pomodoros
+        };
 
-      // Send POST request to API to create new task
-      await fetch(`${API_URL}/tasks`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newTask),
-      });
+        await fetch(`${API_URL}/tasks`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newTask),
+        });
 
-      // Create local task object with a unique ID
-      const localTask = {
-        ...newTask,
-        id: Date.now(), // Simple local ID generation
-      };
+        console.log("Task sent to API:", newTask);  // Debugging log
 
-      // Update local state only
-      setTasks((prev) => ({
-        ...prev,
-        [formattedDate]: [...(prev[formattedDate] || []), localTask],
-      }));
+        const localTask = { ...newTask, id: Date.now() };
 
-      // Reset form
-      setShowAddTaskForm(false);
+        setTasks((prev) => ({
+            ...prev,
+            [formattedDate]: [...(prev[formattedDate] || []), localTask],
+        }));
+
+        setShowAddTaskForm(false);
     } catch (err) {
-      console.error("Error adding task:", err);
-      setError("Failed to add task. Please try again.");
+        console.error("Error adding task:", err);
+        setError("Failed to add task. Please try again.");
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
+  
   // Send PUT request to API to update task completion status
   const handleTaskCompletionToggle = async (taskId) => {
     try {
@@ -130,20 +128,21 @@ export default function Calendar() {
   };
 
   // Send PUT request to API to save edited task
-  const saveEditedTask = async (title, time) => {
+  const saveEditedTask = async (title, time, pomodoros) => {
     try {
       setLoading(true);
-
+  
       // Find the task being edited
       const task = tasksForSelectedDate.find((t) => t.id === editingTaskId);
       if (!task) return;
-
+  
       // Create updated task data
       const updatedTaskData = {
         title: title,
         time: time || "No time set",
+        pomodoros: pomodoros,  // Include Pomodoros
       };
-
+  
       // Send PUT request to API (just for the server logs)
       await fetch(`${API_URL}/tasks/${editingTaskId}`, {
         method: "PUT",
@@ -152,7 +151,7 @@ export default function Calendar() {
         },
         body: JSON.stringify(updatedTaskData),
       });
-
+  
       // Update local state directly
       setTasks((prev) => ({
         ...prev,
@@ -160,7 +159,7 @@ export default function Calendar() {
           t.id === editingTaskId ? { ...t, ...updatedTaskData } : t
         ),
       }));
-
+  
       // Exit edit mode
       setEditingTaskId(null);
     } catch (err) {
@@ -170,7 +169,7 @@ export default function Calendar() {
       setLoading(false);
     }
   };
-
+  
   // Render task items with conditional editing
   const renderTaskItems = () => {
     return sortedTasks.map((task) => {

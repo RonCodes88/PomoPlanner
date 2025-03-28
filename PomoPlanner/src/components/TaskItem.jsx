@@ -14,19 +14,20 @@ const TaskItem = ({ task, onToggleComplete, onStartEditing }) => {
         onClick={() => !task.completed && onStartEditing(task)}
       >
         <p
-          className={`font-medium ${
-            task.completed ? "line-through text-gray-500" : ""
-          }`}
+          className={`font-medium ${task.completed ? "line-through text-gray-500" : ""}`}
         >
           {task.title}
         </p>
         <p
-          className={`text-sm text-gray-600 ${
-            task.completed ? "line-through" : ""
-          }`}
+          className={`text-sm text-gray-600 ${task.completed ? "line-through" : ""}`}
         >
           {task.time}
         </p>
+        {task.pomodoros > 0 && (
+          <p className="text-xs text-green-600 mt-1">
+            ⌚ {task.pomodoros} Pomodoros
+          </p>
+        )}
       </div>
     </li>
   );

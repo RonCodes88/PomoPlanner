@@ -12,7 +12,7 @@ def hello_world():
 def add_task():
     """Add a new task"""
     task_data = request.json
-    print(f"Added task: {task_data['title']} for date {task_data['date']}")
+    print(f"Added task: {task_data['title']} for date {task_data['date']} with {task_data.get('pomodoros', 0)} Pomodoros")
     
     # Return the same task with a fake ID
     task_data['id'] = 12345  # Using a fixed ID for simplicity
