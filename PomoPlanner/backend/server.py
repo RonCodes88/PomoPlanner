@@ -1,8 +1,29 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+import os 
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+
+username = os.environ.get('MONGO_USERNAME')
+password = os.environ.get('MONGO_PASSWORD')
+cluster = os.environ.get('MONGO_CLUSTER')
+
+uri = f"mongodb+srv://{username}:{password}@{cluster}/?appName=Cluster0"
+# Create a new client and connect to the server
+client = MongoClient(uri, server_api=ServerApi('1'))
+# Send a ping to confirm a successful connection
+try:
+    client.admin.command('ping')
+    print("Pinged your deployment. You successfully connected to MongoDB!")
+except Exception as e:
+    print(e)
+
 
 @app.route('/')
 def hello_world():
@@ -32,7 +53,7 @@ def update_task(task_id):
     response_data = {'id': int(task_id), **task_data}
     return jsonify(response_data)
 
-
+ 
 
 if __name__ == '__main__':
     app.run(debug=True)
