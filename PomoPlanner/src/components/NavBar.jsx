@@ -4,14 +4,14 @@ function Navbar() {
   return (
     <nav className="p-4 w-full">
       <div className="flex justify-between items-center">
-        <div className="flex items-center">
+        <Link to="/" className="flex items-center">
           <img
             src="/favicon.ico"
             alt="PomoPlanner logo"
             className="w-6 h-6 mr-2"
           />
           <h1 className="text-2xl font-bold">PomoPlanner</h1>
-        </div>
+        </Link>
         <ul className="flex space-x-4">
           <li>
             <Link to="/">Home</Link>
