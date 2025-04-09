@@ -14,9 +14,6 @@ function Navbar() {
         </Link>
         <ul className="flex space-x-4">
           <li>
-            <Link to="/">Home</Link>
-          </li>
-          <li>
             <Link to="/login">Login</Link>
           </li>
           <li>
