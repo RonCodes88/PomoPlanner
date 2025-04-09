@@ -6,21 +6,22 @@ import CreateAccountPage from "./pages/CreateAccountPage";
 
 function App() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen text-center">
+    <div className="flex flex-col min-h-screen">
       <Navbar />
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <>
-              <h1 className="text-3xl font-bold mb-5">PomoPlanner</h1>
-              <Calendar />
-            </>
-          }
-        />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/create-account" element={<CreateAccountPage />} />
-      </Routes>
+      <div className="flex flex-col items-center justify-center flex-1">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <>
+                <Calendar />
+              </>
+            }
+          />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/create-account" element={<CreateAccountPage />} />
+        </Routes>
+      </div>
     </div>
   );
 }
