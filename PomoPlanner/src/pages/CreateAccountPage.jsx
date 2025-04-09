@@ -61,13 +61,13 @@ function CreateAccountPage() {
         </div>
       )}
 
-      <form onSubmit={handleCreateAccount} className="flex flex-col space-y-4">
+      <form onSubmit={handleCreateAccount} className="flex flex-col space-y-4 w-80">
         <input
           type="email"
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="p-2 border"
+          className="p-2 border rounded"
           disabled={isLoading}
         />
         <input
@@ -75,7 +75,7 @@ function CreateAccountPage() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="p-2 border"
+          className="p-2 border rounded"
           disabled={isLoading}
         />
         <button
