@@ -72,6 +72,46 @@ def create_account():
         print(f"Error creating account: {e}")
         return jsonify({"success": False, "message": "An error occurred"}), 500
 
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    """Authenticate a user"""
+    try:
+        # Get login data from request
+        login_data = request.json
+        email = login_data.get('email')
+        password = login_data.get('password')
+        
+        # Basic validation
+        if not email or not password:
+            return jsonify({"success": False, "message": "Email and password are required"}), 400
+        
+        # Find the user in the database
+        user = users_collection.find_one({"email": email})
+        
+        # Check if user exists
+        if not user:
+            return jsonify({"success": False, "message": "Invalid email or password"}), 401
+        
+        # Check if password is correct (compare with hashed password)
+        stored_password = user.get('password')
+        if bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
+            # Password matched - create user response without password
+            user_data = {
+                "email": user.get('email'),
+                "userId": str(user.get('_id')),
+                "created_at": user.get('created_at')
+            }
+            return jsonify({"success": True, "message": "Login successful", "user": user_data}), 200
+        else:
+            # Password didn't match
+            return jsonify({"success": False, "message": "Invalid email or password"}), 401
+            
+    except Exception as e:
+        print(f"Error during login: {e}")
+        return jsonify({"success": False, "message": "An error occurred"}), 500
+
+
 @app.route('/')
 def hello_world():
     return 'Hello, World!'
