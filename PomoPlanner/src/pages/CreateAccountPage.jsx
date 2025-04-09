@@ -1,18 +1,41 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 function CreateAccountPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleCreateAccount = async (e) => {
     e.preventDefault();
-    const response = await fetch("http://localhost:5000/api/create-account", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await response.json();
-    alert(data.message);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/create-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Success case
+        alert(data.message);
+        setEmail("");
+        setPassword("");
+        navigate("/"); // Redirect to home page
+      } else {
+        // Error case
+        alert(data.message);
+      }
+    } catch (error) {
+      alert("An error occurred. Please try again.");
+      console.error(error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -25,6 +48,7 @@ function CreateAccountPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           className="p-2 border"
+          disabled={isLoading}
         />
         <input
           type="password"
@@ -32,9 +56,14 @@ function CreateAccountPage() {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           className="p-2 border"
+          disabled={isLoading}
         />
-        <button type="submit" className="p-2 bg-green-500 text-white">
-          Create Account
+        <button
+          type="submit"
+          className={`p-2 ${isLoading ? "bg-gray-400" : "bg-green-500"} text-white`}
+          disabled={isLoading}
+        >
+          {isLoading ? "Creating Account..." : "Create Account"}
         </button>
       </form>
     </div>
