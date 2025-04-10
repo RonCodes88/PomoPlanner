@@ -3,12 +3,13 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DateCalendar } from "@mui/x-date-pickers/DateCalendar";
 import { lightGreen, green } from "@mui/material/colors";
 import dayjs from "dayjs";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // Import useEffect
 
 import TaskItem from "./TaskItem";
 import EditTaskForm from "./EditTaskForm";
 import AddTaskForm from "./AddTaskForm";
 import { timeToMinutes } from "../utils/timeUtils";
+import { getUserId } from "../utils/dbUtils";
 
 // API base URL
 const API_URL = "http://localhost:5000/api";
@@ -16,11 +17,29 @@ const API_URL = "http://localhost:5000/api";
 // Sample task data
 const sampleTasks = {
   "2025-03-23": [
-    { id: 1, title: "Complete project", time: "10:00 AM", completed: false, pomodoros: 2 },
-    { id: 2, title: "Team meeting", time: "2:00 PM", completed: false, pomodoros: 1  },
+    {
+      id: 1,
+      title: "Complete project",
+      time: "10:00 AM",
+      completed: false,
+      pomodoros: 2,
+    },
+    {
+      id: 2,
+      title: "Team meeting",
+      time: "2:00 PM",
+      completed: false,
+      pomodoros: 1,
+    },
   ],
   "2025-03-24": [
-    { id: 3, title: "Doctor appointment", time: "9:30 AM", completed: false, pomodoros: 2 },
+    {
+      id: 3,
+      title: "Doctor appointment",
+      time: "9:30 AM",
+      completed: false,
+      pomodoros: 2,
+    },
   ],
 };
 
@@ -32,6 +51,46 @@ export default function Calendar() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [editingTaskId, setEditingTaskId] = useState(null);
+
+  const userId = getUserId();
+
+  // Define fetchUserTasks inside useEffect or use useCallback
+  const fetchUserTasks = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_URL}/tasks?userId=${userId}`);
+
+      if (response.ok) {
+        const tasksList = await response.json();
+
+        // Group tasks by date
+        const tasksByDate = {};
+        tasksList.forEach((task) => {
+          if (!tasksByDate[task.date]) {
+            tasksByDate[task.date] = [];
+          }
+          tasksByDate[task.date].push(task);
+        });
+
+        setTasks(tasksByDate);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to load tasks");
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      setError("Network error when loading tasks");
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]); // Add userId as a dependency for useCallback
+
+  // Now the effect uses the memoized callback
+  useEffect(() => {
+    if (userId) {
+      fetchUserTasks();
+    }
+  }, [userId, fetchUserTasks]); // Add fetchUserTasks to dependencies
 
   // Get tasks for the selected date and sort them by time
   const formattedDate = selectedDate.format("YYYY-MM-DD");
@@ -49,48 +108,46 @@ export default function Calendar() {
     setEditingTaskId(null);
   };
 
-  // Send POST request to API but use local state for UI
-  const handleAddTask = async (title, time, pomodoros = 0) => {
-    console.log("Adding task with:", title, time, pomodoros);  // Debugging log
-
+  const handleAddTask = async (task) => {
     try {
-        setLoading(true);
+      // Use the currently selected date from the calendar
+      const taskWithDate = {
+        ...task,
+        date: selectedDate.format("YYYY-MM-DD"),
+      };
 
-        const newTask = {
-            date: formattedDate,
-            title: title,
-            time: time || "No time set",
-            completed: false,
-            pomodoros: pomodoros  // Include pomodoros
-        };
+      const response = await fetch(`${API_URL}/tasks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(taskWithDate),
+      });
 
-        await fetch(`${API_URL}/tasks`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify(newTask),
+      if (response.ok) {
+        const newTask = await response.json();
+
+        // Update tasks by date correctly
+        setTasks((prevTasks) => {
+          const taskDate = newTask.date;
+          return {
+            ...prevTasks,
+            [taskDate]: [...(prevTasks[taskDate] || []), newTask],
+          };
         });
 
-        console.log("Task sent to API:", newTask);  // Debugging log
-
-        const localTask = { ...newTask, id: Date.now() };
-
-        setTasks((prev) => ({
-            ...prev,
-            [formattedDate]: [...(prev[formattedDate] || []), localTask],
-        }));
-
         setShowAddTaskForm(false);
-    } catch (err) {
-        console.error("Error adding task:", err);
-        setError("Failed to add task. Please try again.");
-    } finally {
-        setLoading(false);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to add task");
+        console.error("Failed to add task:", errorData.message);
+      }
+    } catch (error) {
+      console.error("Error adding task:", error);
+      setError("Network error while adding task");
     }
-};
+  };
 
-  
   // Send PUT request to API to update task completion status
   const handleTaskCompletionToggle = async (taskId) => {
     try {
@@ -98,8 +155,8 @@ export default function Calendar() {
       const task = tasksForSelectedDate.find((t) => t.id === taskId);
       if (!task) return;
 
-      // Send PUT request to API (just for the server logs)
-      await fetch(`${API_URL}/tasks/${taskId}`, {
+      // Send PUT request to API
+      const response = await fetch(`${API_URL}/tasks/${taskId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -109,13 +166,21 @@ export default function Calendar() {
         }),
       });
 
-      // Update local state directly
-      setTasks((prev) => ({
-        ...prev,
-        [formattedDate]: prev[formattedDate].map((t) =>
-          t.id === taskId ? { ...t, completed: !t.completed } : t
-        ),
-      }));
+      if (response.ok) {
+        const updatedTask = await response.json();
+
+        // Update local state with the server response
+        setTasks((prev) => ({
+          ...prev,
+          [formattedDate]: prev[formattedDate].map((t) =>
+            t.id === taskId ? updatedTask : t
+          ),
+        }));
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to update task");
+        console.error("Error toggling task completion:", errorData.message);
+      }
     } catch (err) {
       console.error("Error updating task:", err);
       setError("Failed to update task. Please try again.");
@@ -131,37 +196,48 @@ export default function Calendar() {
   const saveEditedTask = async (title, time, pomodoros) => {
     try {
       setLoading(true);
-  
+
       // Find the task being edited
       const task = tasksForSelectedDate.find((t) => t.id === editingTaskId);
       if (!task) return;
-  
+
       // Create updated task data
       const updatedTaskData = {
         title: title,
-        time: time || "No time set",
-        pomodoros: pomodoros,  // Include Pomodoros
+        time: time || "",
+        pomodoros: parseInt(pomodoros, 10) || 0,
+        // Keep the date and userId the same
+        date: task.date,
+        userId: task.userId || userId,
       };
-  
-      // Send PUT request to API (just for the server logs)
-      await fetch(`${API_URL}/tasks/${editingTaskId}`, {
+
+      // Send PUT request to API
+      const response = await fetch(`${API_URL}/tasks/${editingTaskId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(updatedTaskData),
       });
-  
-      // Update local state directly
-      setTasks((prev) => ({
-        ...prev,
-        [formattedDate]: prev[formattedDate].map((t) =>
-          t.id === editingTaskId ? { ...t, ...updatedTaskData } : t
-        ),
-      }));
-  
-      // Exit edit mode
-      setEditingTaskId(null);
+
+      if (response.ok) {
+        const updatedTask = await response.json();
+
+        // Update local state with the server response
+        setTasks((prev) => ({
+          ...prev,
+          [formattedDate]: prev[formattedDate].map((t) =>
+            t.id === editingTaskId ? updatedTask : t
+          ),
+        }));
+
+        // Exit edit mode
+        setEditingTaskId(null);
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to update task");
+        console.error("Error from server:", errorData.message);
+      }
     } catch (err) {
       console.error("Error updating task:", err);
       setError("Failed to update task. Please try again.");
@@ -169,7 +245,7 @@ export default function Calendar() {
       setLoading(false);
     }
   };
-  
+
   // Render task items with conditional editing
   const renderTaskItems = () => {
     return sortedTasks.map((task) => {
@@ -177,9 +253,9 @@ export default function Calendar() {
         // Return the edit form for the task currently being edited
         return (
           <li key={task.id} className="p-2 text-black bg-gray-50 rounded">
-            <EditTaskForm 
-              task={task} 
-              onSave={saveEditedTask} 
+            <EditTaskForm
+              task={task}
+              onSave={saveEditedTask}
               onCancel={() => setEditingTaskId(null)}
             />
           </li>
@@ -244,9 +320,10 @@ export default function Calendar() {
           )}
 
           {showAddTaskForm ? (
-            <AddTaskForm 
+            <AddTaskForm
               onAddTask={handleAddTask}
               onCancel={() => setShowAddTaskForm(false)}
+              userId={userId}
             />
           ) : (
             <button
