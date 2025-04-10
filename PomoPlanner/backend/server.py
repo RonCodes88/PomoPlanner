@@ -29,9 +29,14 @@ try:
     # Set up database and collections
     db = client.PomoPlanner
     users_collection = db.users
+    tasks_collection = db.tasks
     
 except Exception as e:
     print(f"MongoDB Connection Error: {e}")
+
+@app.route('/')
+def welcome():
+    return 'Welcome to PomoPlanner!'
 
 @app.route('/api/create-account', methods=['POST'])
 def create_account():
@@ -111,10 +116,148 @@ def login():
         print(f"Error during login: {e}")
         return jsonify({"success": False, "message": "An error occurred"}), 500
 
+@app.route('/api/tasks', methods=['POST'])
+def add_task():
+    """Add a new task"""
+    try:
+        task_data = request.json
+        
+        # Validate required fields
+        if not task_data.get('title') or not task_data.get('date'):
+            return jsonify({"success": False, "message": "Title and date are required"}), 400
+        
+        # Get user ID from request
+        user_id = task_data.get('userId')
+        if not user_id:
+            return jsonify({"success": False, "message": "User ID is required"}), 400
+        
+        # Prepare task document with only the needed fields
+        task_document = {
+            "title": task_data['title'],
+            "date": task_data['date'],
+            "time": task_data.get('time', ''),  # Optional time field
+            "pomodoros": task_data.get('pomodoros', 0),  # Ensure it's an integer
+            "userId": user_id,
+            "completed": False  
+        }
+        
+        # Insert into database
+        result = tasks_collection.insert_one(task_document)
+        
+        if result.acknowledged:
+            # Return the task with the MongoDB _id converted to string id
+            # Create a new dictionary instead of modifying the original to avoid _id issues
+            response_data = {
+                "id": str(result.inserted_id),
+                "title": task_document['title'],
+                "date": task_document['date'],
+                "time": task_document.get('time', ''),
+                "pomodoros": task_document.get('pomodoros', 0),
+                "completed": False,
+                "userId": user_id
+            }
+            
+            print(f"Added task: {task_data['title']} for date {task_data['date']} with {task_data.get('pomodoros', 0)} Pomodoros")
+            return jsonify(response_data), 201
+        else:
+            return jsonify({"success": False, "message": "Failed to create task"}), 500
+            
+    except Exception as e:
+        print(f"Error adding task: {e}")
+        return jsonify({"success": False, "message": "An error occurred"}), 500
 
-@app.route('/')
-def hello_world():
-    return 'Hello, World!'
+@app.route('/api/tasks', methods=['GET'])
+def get_tasks():
+    """Get all tasks for a user"""
+    try:
+        # Get user ID from query parameter
+        user_id = request.args.get('userId')
+        
+        if not user_id:
+            return jsonify({"success": False, "message": "User ID is required"}), 400
+            
+        # Find all tasks for this user
+        tasks = list(tasks_collection.find({"userId": user_id}))
+        
+        # Format tasks for response
+        formatted_tasks = []
+        for task in tasks:
+            # Convert MongoDB _id to string id
+            task_dict = {
+                "id": str(task['_id']),
+                "title": task['title'],
+                "date": task['date'],
+                "time": task.get('time', ''),
+                "pomodoros": task.get('pomodoros', 0),
+                "completed": task.get('completed', False)
+            }
+            formatted_tasks.append(task_dict)
+            
+        return jsonify(formatted_tasks)
+        
+    except Exception as e:
+        print(f"Error retrieving tasks: {e}")
+        return jsonify({"success": False, "message": "An error occurred"}), 500
+    
+@app.route('/api/tasks/<task_id>', methods=['PUT'])
+def update_task(task_id):
+    """Update an existing task"""
+    try:
+        task_data = request.json
+        
+        # Find the task first to ensure it exists
+        from bson.objectid import ObjectId
+        try:
+            task_obj_id = ObjectId(task_id)
+        except:
+            return jsonify({"success": False, "message": "Invalid task ID format"}), 400
+            
+        existing_task = tasks_collection.find_one({"_id": task_obj_id})
+        
+        if not existing_task:
+            return jsonify({"success": False, "message": "Task not found"}), 404
+        
+        # Prepare update document - only include fields that can be updated
+        update_data = {}
+        for field in ['title', 'date', 'time', 'pomodoros', 'completed']:
+            if field in task_data:
+                update_data[field] = task_data[field]
+        
+        # Update in database
+        result = tasks_collection.update_one(
+            {"_id": task_obj_id},
+            {"$set": update_data}
+        )
+        
+        if result.modified_count > 0 or result.matched_count > 0:
+            # Log the update
+            if 'completed' in task_data:
+                print(f"Toggled completion status for task {task_id} to: {task_data['completed']}")
+            else:
+                print(f"Edited task {task_id}: {task_data}")
+                
+            # Get the updated task to return
+            updated_task = tasks_collection.find_one({"_id": task_obj_id})
+            
+            # Format response
+            response_data = {
+                "id": task_id,
+                "title": updated_task['title'],
+                "date": updated_task['date'],
+                "time": updated_task.get('time', ''),
+                "pomodoros": updated_task.get('pomodoros', 0),
+                "completed": updated_task.get('completed', False)
+            }
+            
+            return jsonify(response_data)
+        else:
+            return jsonify({"success": False, "message": "No changes made to the task"}), 400
+            
+    except Exception as e:
+        print(f"Error updating task: {e}")
+        return jsonify({"success": False, "message": "An error occurred"}), 500
+
+
 
 
 if __name__ == '__main__':

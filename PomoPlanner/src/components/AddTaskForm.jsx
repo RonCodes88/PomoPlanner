@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const AddTaskForm = ({ onAddTask, onCancel }) => {
+const AddTaskForm = ({ onAddTask, onCancel, userId }) => {
   const [title, setTitle] = useState("");
   const [time, setTime] = useState("");
   const [pomodoros, setPomodoros] = useState(0);
@@ -22,7 +22,18 @@ const AddTaskForm = ({ onAddTask, onCancel }) => {
       return;
     }
 
-    onAddTask(title, time, parseInt(pomodoros, 10)); // Include pomodoros
+    // Create a task object that matches what the server expects
+    const task = {
+      title: title.trim(),
+      date: new Date().toISOString().split("T")[0], // Current date in YYYY-MM-DD format
+      time: time,
+      pomodoros: parseInt(pomodoros, 10) || 0,
+      userId: userId, // This must be passed from parent component
+    };
+
+    onAddTask(task);
+
+    // Reset form
     setTitle("");
     setTime("");
     setPomodoros(0);
@@ -68,7 +79,7 @@ const AddTaskForm = ({ onAddTask, onCancel }) => {
         </button>
         <button
           className="flex-1 bg-gray-200 text-gray-800 px-4 py-2 rounded hover:bg-gray-300"
-          onClick={() => onCancel()}
+          onClick={onCancel}
         >
           Cancel
         </button>
