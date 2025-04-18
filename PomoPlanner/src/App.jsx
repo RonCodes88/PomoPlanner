@@ -3,6 +3,8 @@ import Calendar from "./components/Calendar";
 import Navbar from "./components/NavBar";
 import LoginPage from "./pages/LoginPage";
 import CreateAccountPage from "./pages/CreateAccountPage";
+import TasksPage from "./pages/TasksPage";
+
 
 function App() {
   return (
@@ -20,6 +22,8 @@ function App() {
           />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/create-account" element={<CreateAccountPage />} />
+          <Route path="/tasks" element={<TasksPage />} />
+
         </Routes>
       </div>
     </div>
