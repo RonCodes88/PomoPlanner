@@ -24,15 +24,27 @@ export default function TodayTasksPage() {
   const lastSessionWasWork = useRef(false); // Added to track session type before transition
 
   const fetchTodaysTasks = useCallback(async () => {
-    const today = dayjs().format("YYYY-MM-DD");
+    const today = dayjs().format("YYYY-MM-DD"); // Today's date in the format "YYYY-MM-DD"
+    
     try {
       setLoading(true);
-      const response = await fetch(`${API_URL}/tasks?userId=${userId}&date=${today}`);
+      const response = await fetch(`${API_URL}/tasks?userId=${userId}`);
+      console.log("Today’s date:", today);  // Logs the date you're checking against
+  
       if (response.ok) {
         const tasksList = await response.json();
-        setTasks(tasksList);
-        const initialPomodoroState = tasksList.reduce((acc, task) => {
-          acc[task.id] = 0;
+  
+        // Filter tasks to only include those for today
+        const todaysTasks = tasksList.filter((task) =>
+          dayjs(task.date).isSame(today, "day") // Only include tasks for today
+        );
+  
+        // Set tasks state to today's tasks
+        setTasks(todaysTasks);
+  
+        // Initialize Pomodoro state
+        const initialPomodoroState = todaysTasks.reduce((acc, task) => {
+          acc[task.id] = 0; // Initialize each task's Pomodoro state
           return acc;
         }, {});
         setPomodoroState(initialPomodoroState);
@@ -48,12 +60,14 @@ export default function TodayTasksPage() {
       setLoading(false);
     }
   }, [userId]);
-
+  
   useEffect(() => {
     if (userId) {
       fetchTodaysTasks();
     }
   }, [userId, fetchTodaysTasks]);
+  
+  
 
   const handleTaskSelect = (taskId) => {
     setSelectedTaskId(taskId);
