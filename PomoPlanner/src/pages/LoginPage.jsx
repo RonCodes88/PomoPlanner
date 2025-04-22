@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 function LoginPage() {
   const [email, setEmail] = useState("");
@@ -7,6 +8,7 @@ function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -24,8 +26,7 @@ function LoginPage() {
 
       if (response.ok) {
         // Success case
-        // Store user data in localStorage or context for session management
-        localStorage.setItem("user", JSON.stringify(data.user));
+        login(data.user); // Use the context's login function instead of directly setting localStorage
 
         // Reset form
         setEmail("");
