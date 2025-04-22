@@ -129,7 +129,7 @@ def add_task():
         # Get user ID from request
         user_id = task_data.get('userId')
         if not user_id:
-            return jsonify({"success": False, "message": "User ID is required"}), 400
+            return jsonify({"success": False, "message": "Create Account/Login is required"}), 400
         
         # Prepare task document with only the needed fields
         task_document = {
@@ -174,7 +174,7 @@ def get_tasks():
         user_id = request.args.get('userId')
         
         if not user_id:
-            return jsonify({"success": False, "message": "User ID is required"}), 400
+            return jsonify({"success": False, "message": "Create Account/Login is required"}), 400
             
         # Find all tasks for this user
         tasks = list(tasks_collection.find({"userId": user_id}))
