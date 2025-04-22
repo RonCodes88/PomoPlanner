@@ -61,7 +61,10 @@ function CreateAccountPage() {
         </div>
       )}
 
-      <form onSubmit={handleCreateAccount} className="flex flex-col space-y-4 w-80">
+      <form
+        onSubmit={handleCreateAccount}
+        className="flex flex-col space-y-4 w-80"
+      >
         <input
           type="email"
           placeholder="Email"
