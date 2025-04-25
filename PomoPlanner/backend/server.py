@@ -6,6 +6,8 @@ import os
 from dotenv import load_dotenv
 import bcrypt  # For password hashing
 import datetime
+from bson.objectid import ObjectId
+from groq_helper import GroqClient
 
 load_dotenv()
 
@@ -33,6 +35,9 @@ try:
     
 except Exception as e:
     print(f"MongoDB Connection Error: {e}")
+
+# Initialize the Groq client
+groq_client = GroqClient()
 
 @app.route('/')
 def welcome():
@@ -206,7 +211,6 @@ def update_task(task_id):
         task_data = request.json
         
         # Find the task first to ensure it exists
-        from bson.objectid import ObjectId
         try:
             task_obj_id = ObjectId(task_id)
         except:
@@ -257,8 +261,83 @@ def update_task(task_id):
         print(f"Error updating task: {e}")
         return jsonify({"success": False, "message": "An error occurred"}), 500
 
+@app.route('/api/chatbot', methods=['POST'])
+def chatbot_response():
+    """Process a user message and respond using Groq"""
+    try:
+        data = request.json
+        user_id = data.get('userId')
+        user_message = data.get('message')
+        
+        if not user_id or not user_message:
+            return jsonify({"success": False, "message": "User ID and message are required"}), 400
 
+        # Get the user's tasks from the database
+        tasks = list(tasks_collection.find({"userId": user_id}))
+        
+        # Parse tasks for relevant information
+        today = datetime.datetime.now().strftime("%Y-%m-%d")
+        today_tasks = []
+        upcoming_tasks = []
+        for task in tasks:
+            task_info = {
+                "id": str(task['_id']),
+                "title": task['title'],
+                "date": task['date'],
+                "time": task.get('time', 'No time set'),
+                "pomodoros": task.get('pomodoros', 0),
+                "completed": task.get('completed', False)
+            }
+            
+            if task['date'] == today:
+                today_tasks.append(task_info)
+            elif task['date'] > today:
+                upcoming_tasks.append(task_info)
+        
+        # Sort upcoming tasks by date
+        upcoming_tasks.sort(key=lambda x: x['date'])
+        
+        # Create context for the AI
+        system_message = f"""You are a helpful assistant for the PomoPlanner app. 
+IMPORTANT GUIDELINES:
+1. Return clean responses without checkbox symbols or brackets
+2. Always include ALL upcoming tasks in your response when asked about schedule
+3. Don't ask questions, just provide information
+4. Be concise but complete
 
+Today's date is {datetime.datetime.now().strftime("%Y-%m-%d")}.
+The user has {len(today_tasks)} tasks scheduled for today."""
+        
+        if today_tasks:
+            system_message += "\n\nTODAY'S TASKS:"
+            for i, task in enumerate(today_tasks, 1):
+                status = "completed" if task["completed"] else "not completed"
+                system_message += f"\n{i}. {task['title']} - {task['time']} ({task['pomodoros']} pomodoros) - {status}"
+        else:
+            system_message += "\n\nNo tasks scheduled for today."
+            
+        # Always include upcoming tasks in the context
+        if upcoming_tasks:
+            system_message += "\n\nUPCOMING TASKS:"
+            for i, task in enumerate(upcoming_tasks, 1):
+                system_message += f"\n{i}. {task['title']} - Date: {task['date']}, Time: {task['time']}"
+        else:
+            system_message += "\n\nNo upcoming tasks scheduled."
+
+        # Create the conversation for Groq
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_message}
+        ]
+
+        # Get response from Groq
+        ai_response = groq_client.get_response(messages)
+        
+        return jsonify({"success": True, "response": ai_response})
+        
+    except Exception as e:
+        print(f"Error in chatbot endpoint: {e}")
+        return jsonify({"success": False, "message": "An error occurred"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
