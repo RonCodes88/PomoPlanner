@@ -105,6 +105,22 @@ export default function TodayTasksPage() {
     }
   };
 
+  const handleDeleteTask = async (taskId) => {
+    try {
+      const response = await fetch(`${API_URL}/tasks/${taskId}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      } else {
+        // Optionally handle error
+        console.error("Failed to delete task");
+      }
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    }
+  };
+
   const toggleTimer = () => {
     if (isRunning) {
       clearInterval(intervalIdRef.current);
@@ -276,6 +292,7 @@ export default function TodayTasksPage() {
                   task={task}
                   onToggleComplete={() => handleToggleComplete(task.id)}
                   onStartEditing={(task) => console.log("Start editing", task)}
+                  onDelete={handleDeleteTask}
                 />
                 {task.id === selectedTaskId && (
                   <div>
