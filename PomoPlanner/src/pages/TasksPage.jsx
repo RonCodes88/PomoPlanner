@@ -25,23 +25,23 @@ export default function TodayTasksPage() {
 
   const fetchTodaysTasks = useCallback(async () => {
     const today = dayjs().format("YYYY-MM-DD"); // Today's date in the format "YYYY-MM-DD"
-    
+
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/tasks?userId=${userId}`);
-      console.log("Today’s date:", today);  // Logs the date you're checking against
-  
+      console.log("Today’s date:", today); // Logs the date you're checking against
+
       if (response.ok) {
         const tasksList = await response.json();
-  
+
         // Filter tasks to only include those for today
-        const todaysTasks = tasksList.filter((task) =>
-          dayjs(task.date).isSame(today, "day") // Only include tasks for today
+        const todaysTasks = tasksList.filter(
+          (task) => dayjs(task.date).isSame(today, "day") // Only include tasks for today
         );
-  
+
         // Set tasks state to today's tasks
         setTasks(todaysTasks);
-  
+
         // Initialize Pomodoro state
         const initialPomodoroState = todaysTasks.reduce((acc, task) => {
           acc[task.id] = 0; // Initialize each task's Pomodoro state
@@ -60,14 +60,12 @@ export default function TodayTasksPage() {
       setLoading(false);
     }
   }, [userId]);
-  
+
   useEffect(() => {
     if (userId) {
       fetchTodaysTasks();
     }
   }, [userId, fetchTodaysTasks]);
-  
-  
 
   const handleTaskSelect = (taskId) => {
     setSelectedTaskId(taskId);
@@ -80,6 +78,47 @@ export default function TodayTasksPage() {
       pomodoroStateRef.current = newState;
       return newState;
     });
+  };
+
+  const handleToggleComplete = async (taskId) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    try {
+      const response = await fetch(`${API_URL}/tasks/${taskId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: !task.completed }),
+      });
+      if (response.ok) {
+        const updatedTask = await response.json();
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId ? { ...t, completed: updatedTask.completed } : t
+          )
+        );
+      } else {
+        // Optionally handle error
+        console.error("Failed to update task completion");
+      }
+    } catch (error) {
+      console.error("Error updating task completion:", error);
+    }
+  };
+
+  const handleDeleteTask = async (taskId) => {
+    try {
+      const response = await fetch(`${API_URL}/tasks/${taskId}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      } else {
+        // Optionally handle error
+        console.error("Failed to delete task");
+      }
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    }
   };
 
   const toggleTimer = () => {
@@ -157,66 +196,73 @@ export default function TodayTasksPage() {
   };
 
   return (
-    <div className="tasks-container" style={{ maxWidth: "900px", margin: "0 auto", padding: "20px" }}>
-      <h2 style={{ textAlign: "center", marginBottom: "20px" }}>Today's Tasks</h2>
+    <div
+      className="tasks-container"
+      style={{ maxWidth: "900px", margin: "0 auto", padding: "20px" }}
+    >
+      <h2 style={{ textAlign: "center", marginBottom: "20px" }}>
+        Today's Tasks
+      </h2>
 
       <div
-  style={{
-    border: "1px solid #ccc",
-    borderRadius: "8px",
-    padding: "20px",
-    marginBottom: "20px",
-    boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
-    backgroundColor: "#fdfdfd",
-    textAlign: "center",
-  }}
->
-  <Typography variant="h6" style={{ fontWeight: "600", marginBottom: "10px" }}>
-    {isWorkSession ? "Work Session" : "Break Time"}
-  </Typography>
+        style={{
+          border: "1px solid #ccc",
+          borderRadius: "8px",
+          padding: "20px",
+          marginBottom: "20px",
+          boxShadow: "0 2px 5px rgba(0, 0, 0, 0.1)",
+          backgroundColor: "#fdfdfd",
+          textAlign: "center",
+        }}
+      >
+        <Typography
+          variant="h6"
+          style={{ fontWeight: "600", marginBottom: "10px" }}
+        >
+          {isWorkSession ? "Work Session" : "Break Time"}
+        </Typography>
 
-  <Typography
-    variant="h3"
-    style={{
-      fontFamily: "'Courier New', Courier, monospace",
-      marginBottom: "20px",
-      color: isWorkSession ? "#1976d2" : "#43a047",
-    }}
-  >
-    {formatTime(timeLeft)}
-  </Typography>
+        <Typography
+          variant="h3"
+          style={{
+            fontFamily: "'Courier New', Courier, monospace",
+            marginBottom: "20px",
+            color: isWorkSession ? "#1976d2" : "#43a047",
+          }}
+        >
+          {formatTime(timeLeft)}
+        </Typography>
 
-  <div style={{ marginBottom: "15px" }}>
-    <Button
-      variant="contained"
-      color={isRunning ? "secondary" : "primary"}
-      onClick={toggleTimer}
-      style={{ marginRight: "10px", fontWeight: "bold" }}
-    >
-      {isRunning ? "Pause" : "Start"}
-    </Button>
+        <div style={{ marginBottom: "15px" }}>
+          <Button
+            variant="contained"
+            color={isRunning ? "secondary" : "primary"}
+            onClick={toggleTimer}
+            style={{ marginRight: "10px", fontWeight: "bold" }}
+          >
+            {isRunning ? "Pause" : "Start"}
+          </Button>
 
-    <Button
-      variant="outlined"
-      color="error"
-      onClick={resetTimer}
-      style={{ fontWeight: "bold" }}
-    >
-      Reset
-    </Button>
-  </div>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={resetTimer}
+            style={{ fontWeight: "bold" }}
+          >
+            Reset
+          </Button>
+        </div>
 
-  <Button
-    variant="outlined"
-    color="info"
-    onClick={fastForward}
-    disabled={!isRunning}
-    style={{ fontWeight: "bold" }}
-  >
-    Fast Forward to {isWorkSession ? "Break" : "Work"}
-  </Button>
-</div>
-
+        <Button
+          variant="outlined"
+          color="info"
+          onClick={fastForward}
+          disabled={!isRunning}
+          style={{ fontWeight: "bold" }}
+        >
+          Fast Forward to {isWorkSession ? "Break" : "Work"}
+        </Button>
+      </div>
 
       {loading ? (
         <p style={{ textAlign: "center" }}>Loading today's tasks...</p>
@@ -224,7 +270,10 @@ export default function TodayTasksPage() {
         <p style={{ textAlign: "center", color: "red" }}>{error}</p>
       ) : tasks.length > 0 ? (
         <div className="border p-4 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-2" style={{ textAlign: "center" }}>
+          <h3
+            className="text-lg font-semibold mb-2"
+            style={{ textAlign: "center" }}
+          >
             Tasks for {dayjs().format("MMMM D, YYYY")}
           </h3>
           <ul className="space-y-2">
@@ -234,18 +283,23 @@ export default function TodayTasksPage() {
                 onClick={() => handleTaskSelect(task.id)}
                 style={{
                   cursor: "pointer",
-                  border: task.id === selectedTaskId ? "2px solid blue" : "none",
+                  border:
+                    task.id === selectedTaskId ? "2px solid blue" : "none",
                   padding: "10px",
                 }}
               >
                 <TaskItem
                   task={task}
-                  onToggleComplete={() => console.log("Toggle complete")}
+                  onToggleComplete={() => handleToggleComplete(task.id)}
                   onStartEditing={(task) => console.log("Start editing", task)}
+                  onDelete={handleDeleteTask}
                 />
                 {task.id === selectedTaskId && (
                   <div>
-                    <Typography variant="body2" style={{ textAlign: "right", marginTop: "5px" }}>
+                    <Typography
+                      variant="body2"
+                      style={{ textAlign: "right", marginTop: "5px" }}
+                    >
                       Pomodoros: {pomodoroState[task.id] || 0}
                     </Typography>
                   </div>

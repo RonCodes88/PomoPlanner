@@ -1,6 +1,6 @@
 import React from "react";
 
-const TaskItem = ({ task, onToggleComplete, onStartEditing }) => {
+const TaskItem = ({ task, onToggleComplete, onStartEditing, onDelete }) => {
   return (
     <li className="p-2 text-black bg-gray-50 rounded flex items-center">
       <input
@@ -29,6 +29,17 @@ const TaskItem = ({ task, onToggleComplete, onStartEditing }) => {
           </p>
         )}
       </div>
+      {/* Delete button */}
+      <button
+        className="ml-2 text-red-500 hover:text-red-700"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(task.id);
+        }}
+        title="Delete task"
+      >
+        &#10005;
+      </button>
     </li>
   );
 };

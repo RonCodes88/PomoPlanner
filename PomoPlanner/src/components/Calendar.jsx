@@ -187,6 +187,29 @@ export default function Calendar() {
     }
   };
 
+  const handleDeleteTask = async (taskId) => {
+    try {
+      const response = await fetch(`${API_URL}/tasks/${taskId}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setTasks((prev) => {
+          // Remove the task from the correct date array
+          const updated = { ...prev };
+          updated[formattedDate] = updated[formattedDate].filter(
+            (t) => t.id !== taskId
+          );
+          return updated;
+        });
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || "Failed to delete task");
+      }
+    } catch (error) {
+      setError("Network error while deleting task");
+    }
+  };
+
   // Start editing a task
   const startEditing = (task) => {
     setEditingTaskId(task.id);
@@ -268,6 +291,7 @@ export default function Calendar() {
             task={task}
             onToggleComplete={handleTaskCompletionToggle}
             onStartEditing={startEditing}
+            onDelete={handleDeleteTask} 
           />
         );
       }

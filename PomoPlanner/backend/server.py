@@ -261,6 +261,19 @@ def update_task(task_id):
         print(f"Error updating task: {e}")
         return jsonify({"success": False, "message": "An error occurred"}), 500
 
+@app.route('/api/tasks/<task_id>', methods=['DELETE'])
+def delete_task(task_id):
+    try:
+        task_obj_id = ObjectId(task_id)
+        result = tasks_collection.delete_one({"_id": task_obj_id})
+        if result.deleted_count > 0:
+            return jsonify({"success": True, "message": "Task deleted"})
+        else:
+            return jsonify({"success": False, "message": "Task not found"}), 404
+    except Exception as e:
+        print(f"Error deleting task: {e}")
+        return jsonify({"success": False, "message": "An error occurred"}), 500
+
 @app.route('/api/chatbot', methods=['POST'])
 def chatbot_response():
     """Process a user message and respond using Groq"""
