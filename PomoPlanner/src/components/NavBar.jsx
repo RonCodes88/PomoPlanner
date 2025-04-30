@@ -24,6 +24,7 @@ function Navbar() {
             <h1 className="text-2xl font-bold">PomoPlanner</h1>
           </Link>
           <Link to="/tasks" className="text-lg">Today's Tasks</Link>
+          <Link to="/task-visualization" className="text-lg">Task Progress</Link> {/* Added TaskVisualization link */}
         </div>
 
         <ul className="flex space-x-4">
