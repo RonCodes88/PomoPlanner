@@ -6,6 +6,7 @@ import CreateAccountPage from "./pages/CreateAccountPage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import TasksPage from "./pages/TasksPage";
 import ChatbotComponent from "./components/ChatbotComponent";
+import TaskProgress from "./pages/TaskVisualizationPage";
 
 function HomePage() {
   return (
@@ -30,6 +31,8 @@ function AppContent() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/create-account" element={<CreateAccountPage />} />
           <Route path="/tasks" element={<TasksPage />} />
+          <Route path="/task-visualization" element={<TaskProgress />} />
+          
         </Routes>
       </div>
 
