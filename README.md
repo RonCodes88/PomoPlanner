@@ -56,7 +56,7 @@ cd PomoPlanner
 ```bash
 cd backend
 python -m venv <your-venv-name>
-source <your-venv-name>/bin/activate # On Windows: venv\Scripts\activate
+source <your-venv-name>/bin/activate # On Windows: <your-venv-name>\Scripts\activate
 ```
 ### Install dependencies
 ```bash
