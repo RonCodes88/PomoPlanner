@@ -47,7 +47,7 @@ Start a virtual environment and do:
 pip install -r requirements.txt
 ```
 
-## To Run PomoPlanner
+## 🚀 How To Run PomoPlanner
 ```bash
 git clone https://github.com/RonCodes88/PomoPlanner.git
 cd PomoPlanner
@@ -74,7 +74,7 @@ npm install
 npm run dev
 ```
 
-## File Structure Overview
+## 🗂️ File Structure Overview
 ```bash
 PomoPlanner/
 ├── backend/
@@ -110,5 +110,5 @@ PomoPlanner/
 └── eslint.config.js
 ```
 
-## Known Bugs or Limitations
+## ⚠️ Known Bugs or Limitations
 There are currently no bugs. One limitation is in the AI chat assistant feature where it is only able to answer questions based on a the user's calendar's tasks. The AI chat assistant is not able to perform actual operations on the calendar such as adding a task or deleting a task.
